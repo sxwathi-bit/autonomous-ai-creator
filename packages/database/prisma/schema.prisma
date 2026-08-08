@@ -1,0 +1,96 @@
+// Prisma Schema for Autonomous AI Creator
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Agent {
+  id                  String   @id @default(uuid())
+  name                String
+  domain              String
+  mission             String
+  interests           String   // Stored as JSON string or comma-separated
+  editorialPrinciples String   // Stored as JSON string or text
+  writingStyle        String   // Stored as JSON string or text
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  active              Boolean  @default(true)
+  lastRunAt           DateTime?
+  nextRunAt           DateTime?
+  isRunning           Boolean  @default(false)
+
+  posts               Post[]
+  topics              Topic[]
+  memories            Memory[]
+
+  @@index([active])
+  @@index([nextRunAt])
+}
+
+model Topic {
+  id              String   @id @default(uuid())
+  title           String
+  summary         String
+  url             String
+  source          String
+  discoveredAt    DateTime @default(now())
+  score           Int
+  decision        String   // "accepted" | "rejected"
+  rejectionReason String?
+  editorialAngle  String?
+  processed       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  agentId         String?
+  agent           Agent?   @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  posts           Post[]
+
+  @@index([decision])
+  @@index([agentId])
+  @@index([score])
+  @@index([discoveredAt])
+}
+
+model Post {
+  id        String       @id @default(uuid())
+  agentId   String
+  agent     Agent        @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  topicId   String?
+  topic     Topic?       @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  text      String
+  rationale String
+  createdAt DateTime     @default(now())
+
+  sources   PostSource[]
+
+  @@index([agentId])
+  @@index([createdAt])
+}
+
+model PostSource {
+  id         String   @id @default(uuid())
+  postId     String
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  url        String
+  sourceName String
+  createdAt  DateTime @default(now())
+
+  @@index([postId])
+}
+
+model Memory {
+  id        String   @id @default(uuid())
+  agentId   String
+  agent     Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  type      String   // "published_topic" | "published_angle" | "rejected_topic" | "editorial_preference"
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([agentId])
+  @@index([type])
+}
